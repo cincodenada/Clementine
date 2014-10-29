@@ -100,6 +100,7 @@ void SpotifySearchProvider::SearchFinishedSlot(const pb::spotify::SearchResponse
 
     Result result(this);
     SpotifyService::SongFromProtobuf(track, &result.metadata_);
+    result.metadata_.set_album("Top Tracks");
 
     ret << result;
   }
@@ -107,12 +108,30 @@ void SpotifySearchProvider::SearchFinishedSlot(const pb::spotify::SearchResponse
   for (int i=0 ; i<response.album_size() ; ++i) {
     const pb::spotify::Album& album = response.album(i);
 
+    QHash<QString, int> artistcount;
+    QString artist, majorityArtist;
+    int majorityCount = 0;
+
+    //Choose an album artist
+    for (int j=0; j < album.track_size() ; ++j) {
+      for (int k=0 ; k<album.track(j).artist_size() ; ++k) {
+        artist = QStringFromStdString(album.track(j).artist(k));
+        if(artistcount.contains(artist)) {
+          artistcount[artist]++;
+        } else {
+          artistcount[artist] = 1;
+        }
+        if(artistcount[artist] > majorityCount) { majorityArtist = artist; }
+      }
+    }
+
     for (int j=0; j < album.track_size() ; ++j) {
       Result result(this);
       SpotifyService::SongFromProtobuf(album.track(j), &result.metadata_);
 
       // Just use the album index as an id.
       result.metadata_.set_album_id(i);
+      result.metadata_.set_albumartist(majorityArtist);
 
       ret << result;
     }
